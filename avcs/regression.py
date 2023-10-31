@@ -28,7 +28,6 @@ def eenn_avcs_regression(
     alpha: float,
     seed: int = 0,
     S: int = 1,
-    pabee: bool = False,
 ) -> Tuple[List[List[Tuple[float, float]]], List[float], List[float]]:
     """
     Compute AVCS intervals on top of a pretrained Bayesian Early-Exit Neural Network.
@@ -45,9 +44,9 @@ def eenn_avcs_regression(
     A tuple containing the list of AVCS intervals, epistemic uncertainty values, and predictions.
     """
     set_all_seeds_torch(seed)
-    assert not pabee
-
-    b = x_star.shape[0]
+    
+    albert = BLR_models[0].model is None
+    b = x_star.shape[1] if albert else x_star.shape[0]
 
     c_x = [[] for _ in range(b)]
     epistemic_uncertainty, preds = [], []
@@ -62,7 +61,11 @@ def eenn_avcs_regression(
         # 1) compute params of the current posterior predictive and likehood
         mu_t, Sigma_t = BLR_models[t].post_mu, BLR_models[t].post_cov
 
-        _, h_x = BLR_models[t].forward_with_features(x_star)
+        if albert:
+            h_x = x_star[t]
+        else:
+           _, h_x = BLR_models[t].forward_with_features(x_star)
+
         h_x = h_x.detach().numpy()
         h_x = np.concatenate([h_x, torch.ones(b, 1)], axis=1)
 

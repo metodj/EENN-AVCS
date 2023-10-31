@@ -141,10 +141,14 @@ def eenn_bayes_intervals(
     y_L = mu_pred - n_std * std_pred
     y_R = mu_pred + n_std * std_pred
     """
-    N, _ = x_star.shape
+    albert = BLR_models[0].model is None
+    b = x_star.shape[1] if albert else x_star.shape[0]
     c_x = []
-    for blr_d in BLR_models:
-        y_mu, y_var = blr_d.posterior_predictive(x_star)
+    for t, blr_d in enumerate(BLR_models):
+        if albert:
+            y_mu, y_var = blr_d.posterior_predictive(x_star[t])
+        else:
+            y_mu, y_var = blr_d.posterior_predictive(x_star)
         y_mu = y_mu.squeeze()
         y_var = y_var.squeeze()
         y_L = y_mu - n_std * np.sqrt(y_var)
@@ -153,6 +157,6 @@ def eenn_bayes_intervals(
 
     # transpose
     c_x = [
-        [(c_x[t][0][i], c_x[t][1][i]) for t in range(len(BLR_models))] for i in range(N)
+        [(c_x[t][0][i], c_x[t][1][i]) for t in range(len(BLR_models))] for i in range(b)
     ]
     return c_x
