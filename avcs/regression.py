@@ -38,7 +38,7 @@ def eenn_avcs_regression(
     BLR_models: A list of Bayesian Linear Regression models.
     alpha: The confidence level for interval prediction.
     seed:
-    S: The number of weight samples at each exit.
+    S: The number of weights' samples at each exit.
     pabee:
 
     Returns:
@@ -71,32 +71,24 @@ def eenn_avcs_regression(
         pred_post_var = v_star + sigma_denom**2
 
         mu_num = np.dot(h_x, mu_t)
-        w_hat_t = np.random.multivariate_normal(mu_t.squeeze(), Sigma_t, size=S)
-        mu_denom = np.dot(h_x, w_hat_t.mean(axis=0)[:, np.newaxis])
-
-        # additional term in case we are sampling multiple times at each exit
-        if S > 1:
-            gamma_t_S = (
-                np.mean([np.dot(h_x, w_hat_t[i]) ** 2 for i in range(w_hat_t.shape[0])])
-                - mu_denom**2
-            ) / (2 * sigma_denom**2)
-        else:
-            gamma_t_S = 0.0
 
         # compute epistemic uncertainty and mean predictions
         epistemic_uncertainty.append(v_star)
         preds.append(mu_num)
 
-        # 2) Update the params of quadratic equation
-        alpha_t += 0.5 * (1 / sigma_denom**2 - 1 / pred_post_var)
-        beta_t += mu_num / pred_post_var - mu_denom / sigma_denom**2
-        gamma_t += (
-            mu_denom**2 / (2 * sigma_denom**2)
-            - mu_num**2 / (2 * pred_post_var)
-            + np.log(sigma_denom)
-            - np.log(np.sqrt(pred_post_var))
-            + gamma_t_S
-        )
+        for _ in range(S):
+            w_hat_t = np.random.multivariate_normal(mu_t.squeeze(), Sigma_t, size=1)
+            mu_denom = np.dot(h_x, w_hat_t.mean(axis=0)[:, np.newaxis])
+
+            # 2) Update the params of quadratic equation
+            alpha_t += 0.5 * (1 / sigma_denom**2 - 1 / pred_post_var)
+            beta_t += mu_num / pred_post_var - mu_denom / sigma_denom**2
+            gamma_t += (
+                mu_denom**2 / (2 * sigma_denom**2)
+                - mu_num**2 / (2 * pred_post_var)
+                + np.log(sigma_denom)
+                - np.log(np.sqrt(pred_post_var))
+            )
 
         # 3) solve the quadratic equation to get the interval C_t(x)
         for i in range(b):
