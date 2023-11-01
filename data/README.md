@@ -1,0 +1,1 @@
+Store [precomputed logits](https://drive.google.com/drive/folders/1uDsYII_BBlpUrTweEbh33xaJCQJJJlHp?usp=sharing) from EENN models (e.g. ALBERT, MSDNet) in this directory. 
