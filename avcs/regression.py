@@ -177,8 +177,11 @@ def consistency(C_arr, consistency_type="all", start_index=0):
         consist_arr = []
         for d in range(start_index + 1, D):
             C_d = C_arr[i][d][1] - C_arr[i][d][0]
-            assert C_d >= 0, f"interval is negative: {C_d}"
-            if C_d == 0:
+            # assert C_d >= 0, f"interval is negative: {C_d}"
+            if C_d < 0:
+                print(f"interval is negative: {C_d}")
+                consist_arr.append(0.)
+            elif C_d == 0:
                 consist_arr.append(1.0)
             else:
                 if consistency_type == "t-1":

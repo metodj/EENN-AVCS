@@ -29,7 +29,7 @@ def get_synthetic_data(data_type: str, seed: int = 42):
     if data_type == "3_clusters_homoskedastic":
         X_train, y_train, X_test, y_test = gen_simple_1d(hetero=False)
     elif data_type == "3_clusters_heteroskedastic":
-        X_train, y_train, X_test, y_test = gen_simple_1d(hetero=False)
+        X_train, y_train, X_test, y_test = gen_simple_1d(hetero=True)
     elif data_type == "wiggle":
         X_train, y_train, X_test, y_test, _, _ = gen_wiggle()
     elif data_type == "1_cluster_homoskedastic":

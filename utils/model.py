@@ -89,7 +89,24 @@ def get_params_at_depth_l(model, l):
     return params
 
 
-def fit_eenn_blr(
+def pinball_loss(p, y, alpha1=0.025, alpha2=0.975):
+    """
+    Pinball loss for quantile regression
+    
+    Parameters
+    
+    p: torch.Tensor
+        prediction (batch_size, 2)
+    """
+    p1, p2 = p[:, 0], p[:, 1]
+    diff1 = y - p1
+    loss1 = torch.where(diff1 > 0, alpha1 * diff1, (1 - alpha1) * -diff1)
+    diff2 = y - p2
+    loss2 = torch.where(diff2 > 0, alpha2 * diff2, (1 - alpha2) * -diff2)
+    return torch.mean(loss1 + loss2)
+
+
+def fit_eenn(
     width: int,
     depth: int,
     X_train: np.array,
@@ -97,16 +114,19 @@ def fit_eenn_blr(
     X_test: np.array,
     y_test: np.array,
     device: str,
-    blr_mu_prior_MLP: bool = False,
     lr: float = 1e-3,
     momentum: float = 0.9,
     wd: float = 1e-4,
     epochs: int = 500,
     print_fit_every: int = 100,
     plot_loss: bool = False,
-) -> List[BayesLinearRegressor]:
+    loss: str = "mse", 
+) -> MLP:
+    assert loss in ["mse", "cqr"]
+    output_dim = 2 if loss == "cqr" else 1
+
     # init EENN
-    model = MLP(1, width, 1, depth).to(device)
+    model = MLP(1, width, output_dim, depth).to(device)
     print(f"Nr. params: {sum(p.numel() for p in model.parameters())}")
 
     train_data = TensorDataset(torch.Tensor(X_train), torch.Tensor(y_train))
@@ -116,7 +136,11 @@ def fit_eenn_blr(
     optim = torch.optim.SGD(
         model.parameters(), lr=lr, momentum=momentum, weight_decay=wd
     )
-    loss_func = torch.nn.MSELoss()
+    
+    if loss == "mse":
+        loss_func = torch.nn.MSELoss()
+    else:
+        loss_func = pinball_loss
 
     # train EENN
     for epoch in range(epochs):
@@ -169,6 +193,19 @@ def fit_eenn_blr(
 
     model.eval()
 
+    return model
+
+
+def fit_blr(
+    width: int,
+    depth: int,
+    X_train: np.array,
+    y_train: np.array,
+    device: str,
+    blr_mu_prior_MLP: bool = False,
+    model: MLP = None,
+) -> List[BayesLinearRegressor]:
+    
     if blr_mu_prior_MLP:
         mu_priors = []
         for name, param in model.named_parameters():
